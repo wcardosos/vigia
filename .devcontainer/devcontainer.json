@@ -1,0 +1,16 @@
+{
+  "name": "vigia",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22-bookworm",
+  "postCreateCommand": "sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg && curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | sudo bash -s -- --to /usr/local/bin && sudo corepack enable && corepack prepare pnpm@latest --activate && npm install -g mprocs && curl -fsSL https://claude.ai/install.sh | bash ",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}

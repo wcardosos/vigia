@@ -1,0 +1,24 @@
+# vigia — parallel dev orchestration (mprocs).
+#
+# One panel per module, each running that module's `dev` verb VIA `just` — the Justfile
+# stays the single contract (never call pnpm/tsx/mvn directly here). Adding a module =
+# adding a block to `procs` pointing at `just <module>/dev`, same pattern as the root
+# dispatcher Justfile.
+#
+# Run: `just dev-all` (or `mprocs` directly at the root). Requires mprocs on PATH.
+#
+# Note: in production each camera is an isolated systemd process (one per camera).
+# This here is just the development loop — one `dev` per module, not one per camera.
+
+procs:
+  recorder:
+    shell: just recorder/dev
+    # Still depends on the first real main.ts (task A1); until then the panel reports the failure.
+
+  # Future modules — uncomment when they are born (siblings at the root):
+  #
+  # api:
+  #   shell: just api/dev
+  #
+  # web:
+  #   shell: just web/dev

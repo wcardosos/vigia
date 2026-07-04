@@ -1,0 +1,28 @@
+# recorder — module verbs. Working directory: recorder/.
+
+# List the available verbs.
+default:
+    @just --list
+
+# Full check: lint → types → architecture boundaries → forbidden vocabulary.
+check:
+    pnpm exec eslint .
+    pnpm exec tsc --noEmit
+    pnpm exec depcruise src
+    ! grep -rniE 'ffmpeg' src/domain src/application 2>/dev/null
+
+# Install module dependencies (frozen: fails if lockfile is out of date).
+install:
+    pnpm install --frozen-lockfile
+
+# Unit tests.
+test:
+    pnpm exec vitest run
+
+# Formatting (Prettier).
+format:
+    pnpm exec prettier --write .
+
+# Local run in watch/dev mode via tsx.
+dev:
+    pnpm exec tsx src/infrastructure/main.ts
