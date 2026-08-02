@@ -1,10 +1,25 @@
 {
   "name": "vigia",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:22-bookworm",
-  "postCreateCommand": "sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg && curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | sudo bash -s -- --to /usr/local/bin && sudo corepack enable && corepack prepare pnpm@latest --activate && npm install -g mprocs && curl -fsSL https://claude.ai/install.sh | bash ",
+  "build": { "dockerfile": "Dockerfile" },
+
   "features": {
-    "ghcr.io/devcontainers/features/git:1": {}
+    "ghcr.io/devcontainers/features/node:1": { "version": "24" },
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
   },
+
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,Z",
+
+  "runArgs": ["--userns=keep-id"],
+  "containerUser": "vscode",
+  "updateRemoteUserUID": false,
+
+  "postCreateCommand": "npm i -g mprocs",
+
+  "remoteEnv": {
+    "CLAUDE_CONFIG_DIR": "/workspace/.claude"
+  },
+
   "customizations": {
     "vscode": {
       "extensions": [
