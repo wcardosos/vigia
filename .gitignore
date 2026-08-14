@@ -22,9 +22,6 @@ target/        # Java/Spring (future api module)
 *.log
 logs/
 
-# Local Claude Code settings (shared .claude/settings.json stays tracked)
-.claude/settings.local.json
-
 # OS cruft
 .DS_Store
 Thumbs.db
@@ -32,3 +29,13 @@ Thumbs.db
 # Editor cruft
 *.swp
 *~
+
+# Specs
+**/docs/specs/
+
+# Claude
+.claude/*
+!.claude/settings*.json
+!.claude/skills
+!.claude/hooks
+

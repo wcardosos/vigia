@@ -15,14 +15,26 @@ check:
 install:
     pnpm install --frozen-lockfile
 
-# Unit tests.
+# Every test: unit → integration → e2e.
 test:
     pnpm exec vitest run
+
+# Fast feedback: in-memory tests only, no filesystem and no child processes.
+test-unit:
+    pnpm exec vitest run tests/unit
+
+# Tests that touch the real filesystem.
+test-integration:
+    pnpm exec vitest run tests/integration
+
+# Tests that spawn the recorder as a real process.
+test-e2e:
+    pnpm exec vitest run tests/e2e
 
 # Formatting (Prettier).
 format:
     pnpm exec prettier --write .
 
-# Local run in watch/dev mode via tsx.
+# Local run via tsx. Reads .env; prefix to override, e.g. RECORDING_DIR=/tmp/rec just dev.
 dev:
-    pnpm exec tsx src/infrastructure/main.ts
+    pnpm run start

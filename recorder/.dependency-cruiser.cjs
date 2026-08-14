@@ -15,6 +15,17 @@ module.exports = {
       to: { path: '^src/infrastructure' },
     },
     {
+      name: 'ports-are-type-only',
+      comment:
+        'application/ports holds adapter behavior contracts only: importable as types, never as runtime values',
+      severity: 'error',
+      from: {},
+      to: {
+        path: '^src/application/ports',
+        dependencyTypesNot: ['type-only'],
+      },
+    },
+    {
       name: 'no-circular',
       comment: 'no dependency cycles',
       severity: 'error',
