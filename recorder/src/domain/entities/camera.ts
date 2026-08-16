@@ -9,15 +9,13 @@ export interface CameraProps {
 }
 
 export class Camera {
-  static readonly DEFAULT_SEGMENT_DURATION = Duration.ofSeconds(600);
+  private static readonly _DEFAULT_SEGMENT_DURATION = Duration.ofSeconds(600);
 
-  private constructor(
-    public readonly cameraId: string,
-    public readonly rtspUrl: string,
-    public readonly recordingDir: string,
-    public readonly segmentDuration: Duration,
-    public readonly timezone: string,
-  ) {}
+  static get DEFAULT_SEGMENT_DURATION(): Duration {
+    return Camera._DEFAULT_SEGMENT_DURATION;
+  }
+
+  private constructor(private readonly props: CameraProps) {}
 
   static create(props: CameraProps): Camera {
     const cameraId = props.cameraId.trim();
@@ -37,17 +35,31 @@ export class Camera {
       throw new Error(`timezone must be a valid IANA identifier, got: ${props.timezone}`);
     }
 
-    return new Camera(
-      cameraId,
-      props.rtspUrl,
-      props.recordingDir,
-      props.segmentDuration,
-      props.timezone,
-    );
+    return new Camera({ ...props, cameraId });
+  }
+
+  get cameraId(): string {
+    return this.props.cameraId;
+  }
+
+  get rtspUrl(): string {
+    return this.props.rtspUrl;
+  }
+
+  get recordingDir(): string {
+    return this.props.recordingDir;
+  }
+
+  get segmentDuration(): Duration {
+    return this.props.segmentDuration;
+  }
+
+  get timezone(): string {
+    return this.props.timezone;
   }
 
   equals(other: Camera): boolean {
-    return this.cameraId === other.cameraId;
+    return this.props.cameraId === other.props.cameraId;
   }
 
   private static isValidTimezone(timezone: string): boolean {

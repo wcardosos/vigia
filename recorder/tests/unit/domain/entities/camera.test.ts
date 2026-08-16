@@ -73,6 +73,33 @@ describe('Camera', () => {
     expect(Camera.DEFAULT_SEGMENT_DURATION.seconds).toBe(600);
   });
 
+  it('exposes its attributes as read-only accessors', () => {
+    const camera = Camera.create(validProps);
+
+    expect(() => {
+      (camera as unknown as { cameraId: string }).cameraId = 'cameraB';
+    }).toThrow(TypeError);
+    expect(() => {
+      (camera as unknown as { rtspUrl: string }).rtspUrl = 'rtsp://elsewhere/feed';
+    }).toThrow(TypeError);
+    expect(() => {
+      (camera as unknown as { recordingDir: string }).recordingDir = '/elsewhere';
+    }).toThrow(TypeError);
+    expect(() => {
+      (camera as unknown as { segmentDuration: Duration }).segmentDuration =
+        Duration.ofSeconds(300);
+    }).toThrow(TypeError);
+    expect(() => {
+      (camera as unknown as { timezone: string }).timezone = 'UTC';
+    }).toThrow(TypeError);
+
+    expect(camera.cameraId).toBe('cameraA');
+    expect(camera.rtspUrl).toBe('rtsp://192.168.10.21:554/onvif1');
+    expect(camera.recordingDir).toBe('/var/lib/vigia/cameraA');
+    expect(camera.segmentDuration.equals(Duration.ofSeconds(600))).toBe(true);
+    expect(camera.timezone).toBe('America/Fortaleza');
+  });
+
   it('is equal to another camera with the same identity', () => {
     const camera = Camera.create(validProps);
     const sameIdentity = Camera.create({

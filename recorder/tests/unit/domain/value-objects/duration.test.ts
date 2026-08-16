@@ -24,6 +24,15 @@ describe('Duration', () => {
     expect(() => Duration.ofSeconds(-10)).toThrowError(/-10/);
   });
 
+  it('exposes seconds as a read-only accessor', () => {
+    const duration = Duration.ofSeconds(600);
+
+    expect(() => {
+      (duration as unknown as { seconds: number }).seconds = 1;
+    }).toThrow(TypeError);
+    expect(duration.seconds).toBe(600);
+  });
+
   it('is equal to another duration of the same number of seconds', () => {
     expect(Duration.ofSeconds(600).equals(Duration.ofSeconds(600))).toBe(true);
   });
