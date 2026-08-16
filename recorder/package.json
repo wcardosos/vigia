@@ -6,6 +6,10 @@
   "engines": {
     "node": ">=22"
   },
+  "packageManager": "pnpm@11.18.0",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env --import tsx src/infrastructure/main.ts"
+  },
   "devDependencies": {
     "@types/node": "^26.1.0",
     "dependency-cruiser": "^18.0.0",

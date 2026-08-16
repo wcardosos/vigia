@@ -1,5 +1,5 @@
 {
-  "model": "opus",
+  "model": "opus[1m]",
   "hooks": {
     "PostToolUse": [
       {
@@ -15,5 +15,8 @@
   },
   "effortLevel": "medium",
   "showClearContextOnPlanAccept": true,
-  "skipDangerousModePermissionPrompt": true
+  "tui": "fullscreen",
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "dark",
+  "agentPushNotifEnabled": true
 }

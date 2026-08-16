@@ -1,14 +1,89 @@
 name: CI
+
 on:
   push:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  verbs:
+  tests:
+    name: Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: devcontainers/ci@v0.3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the base image
+        uses: docker/build-push-action@v6
         with:
-          runCmd: just install-all && just check-all && just test-all
+          context: .
+          target: base
+          load: true
+          tags: vigia-base:ci
+          cache-from: type=gha,scope=base
+          cache-to: type=gha,mode=max,scope=base
+
+      - name: Restore the pnpm store
+        uses: actions/cache@v4
+        with:
+          path: .pnpm-store
+          key: pnpm-${{ hashFiles('recorder/pnpm-lock.yaml') }}
+          restore-keys: pnpm-
+
+      - name: install-all
+        run: |
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$PWD:/workspace" -w /workspace \
+            -e HOME=/tmp -e CI=true \
+            -e npm_config_store_dir=/workspace/.pnpm-store \
+            vigia-base:ci \
+            bash -euo pipefail -c 'just install-all'
+
+      - name: check-all
+        run: |
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$PWD:/workspace" -w /workspace \
+            -e HOME=/tmp -e CI=true \
+            -e npm_config_store_dir=/workspace/.pnpm-store \
+            vigia-base:ci \
+            bash -euo pipefail -c 'just check-all'
+
+      - name: Unit tests
+        run: |
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$PWD:/workspace" -w /workspace \
+            -e HOME=/tmp -e CI=true \
+            -e npm_config_store_dir=/workspace/.pnpm-store \
+            vigia-base:ci \
+            bash -euo pipefail -c 'just test-unit-all'
+
+      - name: Integration tests
+        run: |
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$PWD:/workspace" -w /workspace \
+            -e HOME=/tmp -e CI=true \
+            -e npm_config_store_dir=/workspace/.pnpm-store \
+            vigia-base:ci \
+            bash -euo pipefail -c 'just test-integration-all'
+
+      - name: E2E tests
+        run: |
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$PWD:/workspace" -w /workspace \
+            -e HOME=/tmp -e CI=true \
+            -e npm_config_store_dir=/workspace/.pnpm-store \
+            vigia-base:ci \
+            bash -euo pipefail -c 'just test-e2e-all'
