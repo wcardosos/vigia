@@ -1,6 +1,5 @@
 import { resolve } from 'node:path';
-import { ConfigValidationError } from '../application/errors/config-validation-error';
-import { RecordingDirectoryError } from '../application/errors/recording-directory-error';
+import { ApplicationError } from '../application/errors/application-error';
 import type { StartRecording } from '../application/usecases/start-recording';
 import { buildStartRecording } from './container';
 
@@ -10,7 +9,7 @@ function failingFast(startup: () => void): void {
   try {
     startup();
   } catch (error) {
-    if (!(error instanceof ConfigValidationError) && !(error instanceof RecordingDirectoryError)) {
+    if (!(error instanceof ApplicationError)) {
       throw error;
     }
 
