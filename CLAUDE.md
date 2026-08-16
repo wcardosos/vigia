@@ -18,9 +18,19 @@ A task is only **done** when, **in the module that was touched**:
   `pnpm`, `eslint`, `tsc`, `vitest`, or `prettier` directly.
 - Module verbs: `just check`, `just test`, `just format`, `just dev` (run from inside the
   module's folder). At the root, `just check-all` and `just test-all` dispatch to every
-  module.
-- Everything runs **inside the devcontainer** (`pnpm` via corepack, `just` and `ffmpeg` on
-  PATH).
+  module — assim como os agregadores por bucket `just test-unit-all`, `just test-integration-all`
+  e `just test-e2e-all`, que o CI roda em steps separados nessa ordem.
+- A toolchain é definida pelo **`Dockerfile` da raiz**, não por nenhuma máquina. Estágios:
+  `base` (Node + pnpm + `just`, pinados) → `media` (+ ffmpeg, tzdata) → `dev` (+ mprocs, alvo
+  do devcontainer). Localmente você trabalha no devcontainer (`dev`); **o CI roda a mesma
+  imagem `base`**.
+- Logo: se um verbo `just` precisa de uma ferramenta, ela vai no `Dockerfile` — nunca como
+  step avulso no workflow.
+- **`base` não tem ffmpeg, e o CI roda em `base`.** Nenhum teste pode depender do binário; o
+  encoder é exercitado pelo seam de spawn injetado. Um teste que chame ffmpeg de verdade passa
+  local e falha no CI — por desenho.
+- Os pins vivem nos `ARG` do `Dockerfile` e em `recorder/package.json` → `packageManager`.
+  Subir Node ou pnpm significa editar os dois.
 
 ## Modules
 

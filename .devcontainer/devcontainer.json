@@ -1,9 +1,14 @@
 {
   "name": "vigia",
-  "build": { "dockerfile": "Dockerfile" },
+  "build": { "context": "..", "dockerfile": "../Dockerfile", "target": "dev" },
 
   "features": {
-    "ghcr.io/devcontainers/features/node:1": { "version": "24" },
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "username": "node",
+      "installZsh": true,
+      "installOhMyZsh": true,
+      "upgradePackages": false
+    },
     "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
   },
 
@@ -11,21 +16,15 @@
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,Z",
 
   "runArgs": ["--userns=keep-id"],
-  "containerUser": "vscode",
+  "containerUser": "node",
+  "remoteUser": "node",
   "updateRemoteUserUID": false,
 
-  "postCreateCommand": "npm i -g mprocs",
-
-  "remoteEnv": {
-    "CLAUDE_CONFIG_DIR": "/workspace/.claude"
-  },
+  "remoteEnv": { "CLAUDE_CONFIG_DIR": "/workspace/.claude" },
 
   "customizations": {
     "vscode": {
-      "extensions": [
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode"
-      ]
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
     }
   }
 }
