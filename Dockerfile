@@ -1,8 +1,4 @@
 # syntax=docker/dockerfile:1
-#
-#   base   Node + pnpm + just.   <- o CI roda aqui. Sem ffmpeg, de propósito.
-#   media  + ffmpeg + tzdata.    <- base do runtime futuro.
-#   dev    + mprocs.             <- alvo do devcontainer.
 
 FROM node:24.18.1-bookworm-slim AS base
 
@@ -16,7 +12,6 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh \
       | bash -s -- --to /usr/local/bin --tag "${JUST_VERSION}" \
  && just --version
 
-# Deve bater com "packageManager" em recorder/package.json.
 ARG PNPM_VERSION=11.18.0
 RUN npm install -g "pnpm@${PNPM_VERSION}" && pnpm --version
 
