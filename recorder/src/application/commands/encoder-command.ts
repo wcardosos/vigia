@@ -2,7 +2,6 @@ import type { Camera } from '../../domain/entities/camera';
 import type { Duration } from '../../domain/value-objects/duration';
 
 const SEGMENT_FILENAME_PATTERN = 'YYYYMMDDTHHMMSS.ts';
-const PLAYLIST_FILENAME = 'playlist.m3u8';
 
 export interface EncoderCommand {
   readonly inputUrl: string;
@@ -19,7 +18,7 @@ export function encoderCommandFor(camera: Camera): EncoderCommand {
     outputDir: camera.recordingDir,
     segmentDuration: camera.segmentDuration,
     segmentFilenamePattern: SEGMENT_FILENAME_PATTERN,
-    playlistFilename: PLAYLIST_FILENAME,
+    playlistFilename: camera.playlistFilename,
     retainAllSegments: true,
   };
 }

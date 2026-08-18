@@ -33,6 +33,7 @@ const validValues = {
   cameraId: 'cameraA',
   rtspUrl: 'rtsp://192.168.10.21:554/onvif1',
   recordingDir: '/var/lib/vigia/cameraA',
+  playlistFilename: 'playlist.m3u8',
   timezone: 'America/Fortaleza',
 };
 
@@ -48,6 +49,16 @@ const invalidStartups: ReadonlyArray<{
     values: { ...validValues, rtspUrl: 'http://cam/feed' },
   },
   { field: 'recordingDir', displayedValue: '""', values: { ...validValues, recordingDir: '' } },
+  {
+    field: 'playlistFilename',
+    displayedValue: '""',
+    values: { ...validValues, playlistFilename: '' },
+  },
+  {
+    field: 'playlistFilename',
+    displayedValue: '"nested/playlist.m3u8"',
+    values: { ...validValues, playlistFilename: 'nested/playlist.m3u8' },
+  },
   {
     field: 'segmentDurationSeconds',
     displayedValue: '0',
@@ -72,12 +83,35 @@ function startRecorderProcess(values: Record<string, unknown>) {
     `import { HardcodedCameraConfig } from ${JSON.stringify(adapterPath)};`,
     `import { LocalRecordingStorage } from ${JSON.stringify(storagePath)};`,
     `const encoder = { start: () => process.stdout.write(${JSON.stringify(ENCODER_STARTED)}) };`,
-    `startRecorder(new StartRecording(new HardcodedCameraConfig(${JSON.stringify(values)}), new LocalRecordingStorage(), encoder));`,
+    `const segmentSource = { onSegmentClosed: () => {} };`,
+    `const segmentProcessingQueue = { enqueue: () => {} };`,
+    `startRecorder(new StartRecording(new HardcodedCameraConfig(${JSON.stringify(values)}), new LocalRecordingStorage(), encoder, segmentSource, segmentProcessingQueue));`,
   ].join('\n');
 
   return spawnSync(process.execPath, ['--import', 'tsx', '--input-type=module', '--eval', entry], {
     cwd: moduleRoot,
     encoding: 'utf8',
+  });
+}
+
+function startEntrypointWithout(variable: string) {
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    RECORDING_DIR: join(workspace, 'cameraA'),
+    RTSP_URL: 'rtsp://admin:secret@192.168.1.3:554/onvif1',
+    SEGMENT_DURATION_SECONDS: '600',
+    PLAYLIST_FILENAME: 'playlist.m3u8',
+    VIGIA_R2_ENDPOINT: 'https://accountid.r2.cloudflarestorage.com',
+    VIGIA_R2_BUCKET: 'vigia-segments',
+    VIGIA_R2_ACCESS_KEY_ID: 'access-key-id',
+    VIGIA_R2_SECRET_ACCESS_KEY: 'secret-access-key',
+  };
+  delete env[variable];
+
+  return spawnSync(process.execPath, ['--import', 'tsx', mainPath], {
+    cwd: moduleRoot,
+    encoding: 'utf8',
+    env,
   });
 }
 
@@ -109,25 +143,32 @@ describe('recorder startup', () => {
     { field: 'recordingDir', variable: 'RECORDING_DIR' },
     { field: 'rtspUrl', variable: 'RTSP_URL' },
     { field: 'segmentDurationSeconds', variable: 'SEGMENT_DURATION_SECONDS' },
+    { field: 'playlistFilename', variable: 'PLAYLIST_FILENAME' },
   ])(
     'the real entrypoint fails with a non-zero exit code when $variable is not set',
     ({ field, variable }) => {
-      const env: NodeJS.ProcessEnv = {
-        ...process.env,
-        RECORDING_DIR: join(workspace, 'cameraA'),
-        RTSP_URL: 'rtsp://admin:secret@192.168.1.3:554/onvif1',
-        SEGMENT_DURATION_SECONDS: '600',
-      };
-      delete env[variable];
-
-      const result = spawnSync(process.execPath, ['--import', 'tsx', mainPath], {
-        cwd: moduleRoot,
-        encoding: 'utf8',
-        env,
-      });
+      const result = startEntrypointWithout(variable);
 
       expect(result.status).not.toBe(0);
       expect(result.stderr.trim()).toMatch(new RegExp(`^invalid camera configuration: ${field} `));
+      expect(result.stderr).toContain(variable);
+      expect(result.stdout).toBe('');
+    },
+    30_000,
+  );
+
+  it.each([
+    { field: 'endpoint', variable: 'VIGIA_R2_ENDPOINT' },
+    { field: 'bucket', variable: 'VIGIA_R2_BUCKET' },
+    { field: 'accessKeyId', variable: 'VIGIA_R2_ACCESS_KEY_ID' },
+    { field: 'secretAccessKey', variable: 'VIGIA_R2_SECRET_ACCESS_KEY' },
+  ])(
+    'the real entrypoint fails with a non-zero exit code when $variable is not set',
+    ({ field, variable }) => {
+      const result = startEntrypointWithout(variable);
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr.trim()).toMatch(new RegExp(`^invalid r2 configuration: ${field} `));
       expect(result.stderr).toContain(variable);
       expect(result.stdout).toBe('');
     },

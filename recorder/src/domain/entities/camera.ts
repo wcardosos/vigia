@@ -5,6 +5,7 @@ export interface CameraProps {
   readonly rtspUrl: string;
   readonly recordingDir: string;
   readonly segmentDuration: Duration;
+  readonly playlistFilename: string;
   readonly timezone: string;
 }
 
@@ -31,11 +32,18 @@ export class Camera {
       throw new Error(`recordingDir must be a non-empty absolute path, got: ${props.recordingDir}`);
     }
 
+    const playlistFilename = props.playlistFilename.trim();
+    if (playlistFilename.length === 0 || playlistFilename.includes('/')) {
+      throw new Error(
+        `playlistFilename must be a non-empty file name without a path separator, got: ${props.playlistFilename}`,
+      );
+    }
+
     if (!Camera.isValidTimezone(props.timezone)) {
       throw new Error(`timezone must be a valid IANA identifier, got: ${props.timezone}`);
     }
 
-    return new Camera({ ...props, cameraId });
+    return new Camera({ ...props, cameraId, playlistFilename });
   }
 
   get cameraId(): string {
@@ -52,6 +60,10 @@ export class Camera {
 
   get segmentDuration(): Duration {
     return this.props.segmentDuration;
+  }
+
+  get playlistFilename(): string {
+    return this.props.playlistFilename;
   }
 
   get timezone(): string {

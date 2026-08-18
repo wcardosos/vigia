@@ -86,6 +86,7 @@ anything. Nothing outside the composition root reads `process.env`.
 | `RECORDING_DIR`            | `recordingDir`           | absolute path, writable by the recorder's user |
 | `RTSP_URL`                 | `rtspUrl`                | full `rtsp://` URL, **credentials included**   |
 | `SEGMENT_DURATION_SECONDS` | `segmentDurationSeconds` | positive integer (600 in production)           |
+| `PLAYLIST_FILENAME`        | `playlistFilename`       | file name only, no path separator (`.m3u8`)    |
 
 `.env.example` is the contract and is git-tracked; `.env` holds the real values and is
 git-ignored — **credentials never get committed**. Both `pnpm run start` and `just dev` load it
@@ -127,6 +128,11 @@ adapter configuration — not domain vocabulary.
 - Acronyms become lowercase joined, not separate segments: `R2Archive` → `r2-archive.ts`,
   `RestRegistry` → `rest-registry.ts`, `JsonLogger` → `json-logger.ts`.
 - Files with no class are a single word: `container.ts`, `main.ts`.
+- A class file holds the class and the types that are its contract — nothing else. Constants,
+  helper functions and default seam implementations belong **inside** the class as
+  `private static`, so the class starts within a few lines of the imports and every declaration
+  has an owner. Types are the stated exception only because TypeScript cannot nest them: an
+  `interface`/`type` stays above the class.
 
 ## Folder map
 
@@ -204,7 +210,7 @@ The module's canonical exemplar is the config provider slice (task A1):
 
 - `src/infrastructure/config/hardcoded-camera-config.ts` — the reference adapter: implements a
   port, holds the technology/source vocabulary, and translates domain construction failures into
-  `ConfigValidationError(field, reason)` with the field decided at the wrap site.
+  `ConfigValidationError(scope, field, reason)` with the field decided at the wrap site.
 - `src/infrastructure/container.ts` / `src/infrastructure/main.ts` — the composition root and the
   fail-fast entrypoint (invalid configuration exits non-zero before anything else starts).
 - `tests/unit/infrastructure/config/hardcoded-camera-config.test.ts` and
