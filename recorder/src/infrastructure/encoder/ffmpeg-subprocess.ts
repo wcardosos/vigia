@@ -14,61 +14,65 @@ export type SpawnEncoderProcess = (
   options: EncoderProcessOptions,
 ) => void;
 
-const FFMPEG_BINARY = 'ffmpeg';
-
-const STRFTIME_REPLACEMENTS: ReadonlyArray<readonly [RegExp, string]> = [
-  [/YYYY/g, '%Y'],
-  [/MM(?=DD)/g, '%m'],
-  [/DD/g, '%d'],
-  [/HH/g, '%H'],
-  [/MM/g, '%M'],
-  [/SS/g, '%S'],
-];
-
-function strftimeOf(segmentFilenamePattern: string): string {
-  return STRFTIME_REPLACEMENTS.reduce(
-    (pattern, [token, replacement]) => pattern.replace(token, replacement),
-    segmentFilenamePattern,
-  );
-}
-
-export function ffmpegArgumentsFor(command: EncoderCommand): string[] {
-  return [
-    '-nostdin',
-    '-rtsp_transport',
-    'udp',
-    '-i',
-    command.inputUrl,
-    '-an',
-    '-c',
-    'copy',
-    '-f',
-    'hls',
-    '-hls_time',
-    String(command.segmentDuration.seconds),
-    ...(command.retainAllSegments ? ['-hls_list_size', '0'] : []),
-    '-strftime',
-    '1',
-    '-hls_segment_filename',
-    join(command.outputDir, strftimeOf(command.segmentFilenamePattern)),
-    join(command.outputDir, command.playlistFilename),
-  ];
-}
-
-const spawnFfmpeg: SpawnEncoderProcess = (binary, args, options) => {
-  spawn(binary, [...args], { env: options.env, stdio: options.stdio });
-};
-
 export class FfmpegSubprocess implements Encoder {
+  private static readonly FFMPEG_BINARY = 'ffmpeg';
+
+  private static readonly STRFTIME_REPLACEMENTS: ReadonlyArray<readonly [RegExp, string]> = [
+    [/YYYY/g, '%Y'],
+    [/MM(?=DD)/g, '%m'],
+    [/DD/g, '%d'],
+    [/HH/g, '%H'],
+    [/MM/g, '%M'],
+    [/SS/g, '%S'],
+  ];
+
+  private static readonly spawnFfmpeg: SpawnEncoderProcess = (binary, args, options) => {
+    spawn(binary, [...args], { env: options.env, stdio: options.stdio });
+  };
+
   constructor(
     private readonly timezone: string,
-    private readonly spawnEncoderProcess: SpawnEncoderProcess = spawnFfmpeg,
+    private readonly spawnEncoderProcess: SpawnEncoderProcess = FfmpegSubprocess.spawnFfmpeg,
   ) {}
 
   start(command: EncoderCommand): void {
-    this.spawnEncoderProcess(FFMPEG_BINARY, ffmpegArgumentsFor(command), {
-      env: { ...process.env, TZ: this.timezone },
-      stdio: 'inherit',
-    });
+    this.spawnEncoderProcess(
+      FfmpegSubprocess.FFMPEG_BINARY,
+      FfmpegSubprocess.argumentsFor(command),
+      {
+        env: { ...process.env, TZ: this.timezone },
+        stdio: 'inherit',
+      },
+    );
+  }
+
+  private static argumentsFor(command: EncoderCommand): string[] {
+    return [
+      '-nostdin',
+      '-rtsp_transport',
+      'udp',
+      '-i',
+      command.inputUrl,
+      '-an',
+      '-c',
+      'copy',
+      '-f',
+      'hls',
+      '-hls_time',
+      String(command.segmentDuration.seconds),
+      ...(command.retainAllSegments ? ['-hls_list_size', '0'] : []),
+      '-strftime',
+      '1',
+      '-hls_segment_filename',
+      join(command.outputDir, FfmpegSubprocess.strftimeOf(command.segmentFilenamePattern)),
+      join(command.outputDir, command.playlistFilename),
+    ];
+  }
+
+  private static strftimeOf(segmentFilenamePattern: string): string {
+    return FfmpegSubprocess.STRFTIME_REPLACEMENTS.reduce(
+      (pattern, [token, replacement]) => pattern.replace(token, replacement),
+      segmentFilenamePattern,
+    );
   }
 }

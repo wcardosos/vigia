@@ -7,6 +7,7 @@ const validProps: CameraProps = {
   rtspUrl: 'rtsp://192.168.10.21:554/onvif1',
   recordingDir: '/var/lib/vigia/cameraA',
   segmentDuration: Duration.ofSeconds(600),
+  playlistFilename: 'playlist.m3u8',
   timezone: 'America/Fortaleza',
 };
 
@@ -18,6 +19,7 @@ describe('Camera', () => {
     expect(camera.rtspUrl).toBe('rtsp://192.168.10.21:554/onvif1');
     expect(camera.recordingDir).toBe('/var/lib/vigia/cameraA');
     expect(camera.segmentDuration.equals(Duration.ofSeconds(600))).toBe(true);
+    expect(camera.playlistFilename).toBe('playlist.m3u8');
     expect(camera.timezone).toBe('America/Fortaleza');
   });
 
@@ -46,6 +48,26 @@ describe('Camera', () => {
     { displayedValue: '"./cameraA"', recordingDir: './cameraA' },
   ])('rejects a recordingDir of $displayedValue', ({ recordingDir }) => {
     expect(() => Camera.create({ ...validProps, recordingDir })).toThrowError(/recordingDir/);
+  });
+
+  it.each([
+    { displayedValue: '""', playlistFilename: '' },
+    { displayedValue: '"   "', playlistFilename: '   ' },
+    { displayedValue: '"nested/playlist.m3u8"', playlistFilename: 'nested/playlist.m3u8' },
+    {
+      displayedValue: '"/var/lib/vigia/playlist.m3u8"',
+      playlistFilename: '/var/lib/vigia/playlist.m3u8',
+    },
+  ])('rejects a playlistFilename of $displayedValue', ({ playlistFilename }) => {
+    expect(() => Camera.create({ ...validProps, playlistFilename })).toThrowError(
+      /playlistFilename/,
+    );
+  });
+
+  it('trims surrounding whitespace from the playlist file name', () => {
+    expect(
+      Camera.create({ ...validProps, playlistFilename: '  stream.m3u8  ' }).playlistFilename,
+    ).toBe('stream.m3u8');
   });
 
   it.each([
@@ -90,6 +112,9 @@ describe('Camera', () => {
         Duration.ofSeconds(300);
     }).toThrow(TypeError);
     expect(() => {
+      (camera as unknown as { playlistFilename: string }).playlistFilename = 'other.m3u8';
+    }).toThrow(TypeError);
+    expect(() => {
       (camera as unknown as { timezone: string }).timezone = 'UTC';
     }).toThrow(TypeError);
 
@@ -97,6 +122,7 @@ describe('Camera', () => {
     expect(camera.rtspUrl).toBe('rtsp://192.168.10.21:554/onvif1');
     expect(camera.recordingDir).toBe('/var/lib/vigia/cameraA');
     expect(camera.segmentDuration.equals(Duration.ofSeconds(600))).toBe(true);
+    expect(camera.playlistFilename).toBe('playlist.m3u8');
     expect(camera.timezone).toBe('America/Fortaleza');
   });
 

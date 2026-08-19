@@ -9,6 +9,7 @@ const validValues: HardcodedCameraValues = {
   cameraId: 'cameraA',
   rtspUrl: 'rtsp://192.168.10.21:554/onvif1',
   recordingDir: '/var/lib/vigia/cameraA',
+  playlistFilename: 'playlist.m3u8',
   timezone: 'America/Fortaleza',
 };
 
@@ -35,6 +36,16 @@ const invalidValues: ReadonlyArray<{
     values: { ...validValues, segmentDurationSeconds: -10 },
   },
   {
+    field: 'playlistFilename',
+    displayedValue: '""',
+    values: { ...validValues, playlistFilename: '' },
+  },
+  {
+    field: 'playlistFilename',
+    displayedValue: '"nested/playlist.m3u8"',
+    values: { ...validValues, playlistFilename: 'nested/playlist.m3u8' },
+  },
+  {
     field: 'timezone',
     displayedValue: '"America/Invalid"',
     values: { ...validValues, timezone: 'America/Invalid' },
@@ -51,6 +62,7 @@ describe('HardcodedCameraConfig', () => {
     expect(camera.rtspUrl).toBe('rtsp://192.168.10.21:554/onvif1');
     expect(camera.recordingDir).toBe('/var/lib/vigia/cameraA');
     expect(camera.segmentDuration.seconds).toBe(600);
+    expect(camera.playlistFilename).toBe('playlist.m3u8');
     expect(camera.timezone).toBe('America/Fortaleza');
   });
 

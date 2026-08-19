@@ -3,13 +3,16 @@ import { encoderCommandFor } from '../../../../src/application/commands/encoder-
 import { Camera } from '../../../../src/domain/entities/camera';
 import { Duration } from '../../../../src/domain/value-objects/duration';
 
-const camera = Camera.create({
+const cameraProps = {
   cameraId: 'cameraA',
   rtspUrl: 'rtsp://192.168.10.21:554/onvif1',
   recordingDir: '/var/lib/vigia/cameraA',
   segmentDuration: Duration.ofSeconds(600),
+  playlistFilename: 'playlist.m3u8',
   timezone: 'America/Fortaleza',
-});
+};
+
+const camera = Camera.create(cameraProps);
 
 describe('encoderCommandFor', () => {
   it('derived command captures the camera stream into its recording directory', () => {
@@ -24,6 +27,12 @@ describe('encoderCommandFor', () => {
 
     expect(command.segmentDuration.seconds).toBe(600);
     expect(command.playlistFilename).toBe('playlist.m3u8');
+  });
+
+  it('derived command writes the playlist file name the camera was configured with', () => {
+    const otherCamera = Camera.create({ ...cameraProps, playlistFilename: 'stream.m3u8' });
+
+    expect(encoderCommandFor(otherCamera).playlistFilename).toBe('stream.m3u8');
   });
 
   it('derived command names segments with the provisional pattern YYYYMMDDTHHMMSS.ts', () => {

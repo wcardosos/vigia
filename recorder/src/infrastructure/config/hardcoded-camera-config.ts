@@ -8,22 +8,30 @@ export interface HardcodedCameraValues {
   readonly rtspUrl: string;
   readonly recordingDir: string;
   readonly segmentDurationSeconds?: number;
+  readonly playlistFilename: string;
   readonly timezone: string;
 }
 
-type CameraField = 'cameraId' | 'rtspUrl' | 'recordingDir' | 'timezone';
-
-const CAMERA_FIELDS: readonly CameraField[] = ['cameraId', 'rtspUrl', 'recordingDir', 'timezone'];
-
-const DOMAIN_ACCEPTED_PROPS: CameraProps = {
-  cameraId: 'accepted',
-  rtspUrl: 'rtsp://accepted',
-  recordingDir: '/accepted',
-  segmentDuration: Camera.DEFAULT_SEGMENT_DURATION,
-  timezone: 'UTC',
-};
+type CameraField = 'cameraId' | 'rtspUrl' | 'recordingDir' | 'playlistFilename' | 'timezone';
 
 export class HardcodedCameraConfig implements CameraConfig {
+  private static readonly CAMERA_FIELDS: readonly CameraField[] = [
+    'cameraId',
+    'rtspUrl',
+    'recordingDir',
+    'playlistFilename',
+    'timezone',
+  ];
+
+  private static readonly DOMAIN_ACCEPTED_PROPS: CameraProps = {
+    cameraId: 'accepted',
+    rtspUrl: 'rtsp://accepted',
+    recordingDir: '/accepted',
+    segmentDuration: Camera.DEFAULT_SEGMENT_DURATION,
+    playlistFilename: 'accepted.m3u8',
+    timezone: 'UTC',
+  };
+
   constructor(private readonly values: HardcodedCameraValues) {}
 
   getCamera(): Camera {
@@ -32,6 +40,7 @@ export class HardcodedCameraConfig implements CameraConfig {
       rtspUrl: this.values.rtspUrl,
       recordingDir: this.values.recordingDir,
       segmentDuration: this.segmentDuration(),
+      playlistFilename: this.values.playlistFilename,
       timezone: this.values.timezone,
     };
 
@@ -39,6 +48,7 @@ export class HardcodedCameraConfig implements CameraConfig {
       return Camera.create(props);
     } catch (cause) {
       throw new ConfigValidationError(
+        'camera',
         HardcodedCameraConfig.fieldRejectedBy(props),
         HardcodedCameraConfig.reasonOf(cause),
         { cause },
@@ -56,6 +66,7 @@ export class HardcodedCameraConfig implements CameraConfig {
       return Duration.ofSeconds(seconds);
     } catch (cause) {
       throw new ConfigValidationError(
+        'camera',
         'segmentDurationSeconds',
         HardcodedCameraConfig.reasonOf(cause),
         { cause },
@@ -65,13 +76,15 @@ export class HardcodedCameraConfig implements CameraConfig {
 
   private static fieldRejectedBy(props: CameraProps): CameraField | 'camera' {
     return (
-      CAMERA_FIELDS.find((field) => !HardcodedCameraConfig.domainAccepts(field, props)) ?? 'camera'
+      HardcodedCameraConfig.CAMERA_FIELDS.find(
+        (field) => !HardcodedCameraConfig.domainAccepts(field, props),
+      ) ?? 'camera'
     );
   }
 
   private static domainAccepts(field: CameraField, props: CameraProps): boolean {
     try {
-      Camera.create({ ...DOMAIN_ACCEPTED_PROPS, [field]: props[field] });
+      Camera.create({ ...HardcodedCameraConfig.DOMAIN_ACCEPTED_PROPS, [field]: props[field] });
       return true;
     } catch {
       return false;
