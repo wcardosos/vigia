@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { ApplicationError } from '../application/errors/application-error';
 import type { StartRecording } from '../application/usecases/start-recording';
 import { buildStartRecording } from './container';
+import { Env } from './env';
 
 const STARTUP_FAILURE_EXIT_CODE = 1;
 
@@ -23,5 +24,5 @@ export function startRecorder(startRecording: StartRecording): void {
 }
 
 if (import.meta.filename === resolve(process.argv[1] ?? '')) {
-  failingFast(() => startRecorder(buildStartRecording()));
+  failingFast(() => startRecorder(buildStartRecording(Env.load(process.env), process.env)));
 }

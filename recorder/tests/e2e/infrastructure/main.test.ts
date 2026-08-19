@@ -97,14 +97,14 @@ function startRecorderProcess(values: Record<string, unknown>) {
 function startEntrypointWithout(variable: string) {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
-    RECORDING_DIR: join(workspace, 'cameraA'),
-    RTSP_URL: 'rtsp://admin:secret@192.168.1.3:554/onvif1',
-    SEGMENT_DURATION_SECONDS: '600',
-    PLAYLIST_FILENAME: 'playlist.m3u8',
-    VIGIA_R2_ENDPOINT: 'https://accountid.r2.cloudflarestorage.com',
-    VIGIA_R2_BUCKET: 'vigia-segments',
-    VIGIA_R2_ACCESS_KEY_ID: 'access-key-id',
-    VIGIA_R2_SECRET_ACCESS_KEY: 'secret-access-key',
+    VIGIA_RECORDING_DIR: join(workspace, 'cameraA'),
+    VIGIA_RTSP_URL: 'rtsp://admin:secret@192.168.1.3:554/onvif1',
+    VIGIA_SEGMENT_DURATION_SECONDS: '600',
+    VIGIA_PLAYLIST_FILENAME: 'playlist.m3u8',
+    VIGIA_S3_ENDPOINT: 'https://accountid.r2.cloudflarestorage.com',
+    VIGIA_S3_BUCKET: 'vigia-segments',
+    VIGIA_S3_ACCESS_KEY_ID: 'access-key-id',
+    VIGIA_S3_SECRET_ACCESS_KEY: 'secret-access-key',
   };
   delete env[variable];
 
@@ -140,35 +140,21 @@ describe('recorder startup', () => {
   }, 30_000);
 
   it.each([
-    { field: 'recordingDir', variable: 'RECORDING_DIR' },
-    { field: 'rtspUrl', variable: 'RTSP_URL' },
-    { field: 'segmentDurationSeconds', variable: 'SEGMENT_DURATION_SECONDS' },
-    { field: 'playlistFilename', variable: 'PLAYLIST_FILENAME' },
+    'VIGIA_RECORDING_DIR',
+    'VIGIA_RTSP_URL',
+    'VIGIA_SEGMENT_DURATION_SECONDS',
+    'VIGIA_PLAYLIST_FILENAME',
+    'VIGIA_S3_ENDPOINT',
+    'VIGIA_S3_BUCKET',
+    'VIGIA_S3_ACCESS_KEY_ID',
+    'VIGIA_S3_SECRET_ACCESS_KEY',
   ])(
-    'the real entrypoint fails with a non-zero exit code when $variable is not set',
-    ({ field, variable }) => {
+    'the real entrypoint fails with a non-zero exit code when %s is not set',
+    (variable) => {
       const result = startEntrypointWithout(variable);
 
       expect(result.status).not.toBe(0);
-      expect(result.stderr.trim()).toMatch(new RegExp(`^invalid camera configuration: ${field} `));
-      expect(result.stderr).toContain(variable);
-      expect(result.stdout).toBe('');
-    },
-    30_000,
-  );
-
-  it.each([
-    { field: 'endpoint', variable: 'VIGIA_R2_ENDPOINT' },
-    { field: 'bucket', variable: 'VIGIA_R2_BUCKET' },
-    { field: 'accessKeyId', variable: 'VIGIA_R2_ACCESS_KEY_ID' },
-    { field: 'secretAccessKey', variable: 'VIGIA_R2_SECRET_ACCESS_KEY' },
-  ])(
-    'the real entrypoint fails with a non-zero exit code when $variable is not set',
-    ({ field, variable }) => {
-      const result = startEntrypointWithout(variable);
-
-      expect(result.status).not.toBe(0);
-      expect(result.stderr.trim()).toMatch(new RegExp(`^invalid r2 configuration: ${field} `));
+      expect(result.stderr.trim()).toMatch(/^invalid environment configuration:/);
       expect(result.stderr).toContain(variable);
       expect(result.stdout).toBe('');
     },

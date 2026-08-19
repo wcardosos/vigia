@@ -9,7 +9,7 @@ import { StorageKey } from '../../../../src/domain/value-objects/storage-key';
 import { TimeRange } from '../../../../src/domain/value-objects/time-range';
 import {
   R2Archive,
-  type R2Values,
+  type S3Values,
   type S3ClientLike,
 } from '../../../../src/infrastructure/archive/r2-archive';
 
@@ -19,7 +19,7 @@ const EXPECTED_KEY = 'cameraA/2026/07/19/143000.ts';
 const LOCAL_14_30_00 = new Date('2026-07-19T17:30:00.000Z');
 const LOCAL_14_40_07 = new Date('2026-07-19T17:40:07.000Z');
 
-const values: R2Values = {
+const values: S3Values = {
   endpoint: 'https://accountid.r2.cloudflarestorage.com',
   bucket: 'vigia-segments',
   accessKeyId: 'access-key-id',

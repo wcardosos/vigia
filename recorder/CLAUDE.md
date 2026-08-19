@@ -76,32 +76,97 @@ In **phase A** the composition root injects `NoopRegistry` (confirms immediately
 
 ## Configuration (environment)
 
-Every camera value that changes per deployment enters through **one door**: `cameraValues(env)`
-in `infrastructure/container.ts`. **There are no defaults** — a missing or blank variable is a
-`ConfigValidationError` and the process exits non-zero before touching disk or spawning
-anything. Nothing outside the composition root reads `process.env`.
+Every value that changes per deployment enters through **one door**: `Env.load(source)` in
+`infrastructure/env.ts`, called exactly once, from `main.ts`. **There are no defaults** — a
+missing, blank or malformed variable is an `EnvValidationError` and the process exits non-zero
+before touching disk or spawning anything. `Env` reads no I/O and no global: `load` takes the
+source as a parameter, so "`VIGIA_S3_BUCKET` is missing" is tested with an object literal.
 
-| Variable                   | Field                    | Expected                                       |
-| -------------------------- | ------------------------ | ---------------------------------------------- |
-| `RECORDING_DIR`            | `recordingDir`           | absolute path, writable by the recorder's user |
-| `RTSP_URL`                 | `rtspUrl`                | full `rtsp://` URL, **credentials included**   |
-| `SEGMENT_DURATION_SECONDS` | `segmentDurationSeconds` | positive integer (600 in production)           |
-| `PLAYLIST_FILENAME`        | `playlistFilename`       | file name only, no path separator (`.m3u8`)    |
+`Env` lives at the root of `infrastructure`, next to `container.ts` and `main.ts` — **not** in
+`config/`, which is reserved for port adapters. It implements no port; it is the composition
+root's companion. Its Zod schema is **private to the file**: exporting it would let the coupling
+back in through the side door.
+
+The accessors carry a group only where the variable name already has one — today `s3` is the
+only earned group: `env.rtspUrl`, `env.recordingDir`, `env.segmentDurationSeconds`,
+`env.playlistFilename`, `env.s3.{endpoint,bucket,accessKeyId,secretAccessKey}`. `env.s3` is a
+frozen object, ready to be handed whole to the adapter's constructor.
+
+| Variable                         | Field                    | Expected                                       |
+| -------------------------------- | ------------------------ | ---------------------------------------------- |
+| `VIGIA_RTSP_URL`                 | `rtspUrl`                | full `rtsp://` URL, **credentials included**   |
+| `VIGIA_RECORDING_DIR`            | `recordingDir`           | absolute path, writable by the recorder's user |
+| `VIGIA_SEGMENT_DURATION_SECONDS` | `segmentDurationSeconds` | positive integer (600 in production)           |
+| `VIGIA_PLAYLIST_FILENAME`        | `playlistFilename`       | file name only, no path separator (`.m3u8`)    |
+
+The archive credentials come from the same door, under the `s3` group: `VIGIA_S3_ENDPOINT`
+(`https://`, **without the bucket in the path**), `VIGIA_S3_BUCKET`, `VIGIA_S3_ACCESS_KEY_ID`,
+`VIGIA_S3_SECRET_ACCESS_KEY`. They are passed **explicitly** to the `S3Client` constructor —
+without that the SDK's default credential chain would look for `AWS_*`, `~/.aws/credentials` and
+instance metadata, and could authenticate against the wrong account with no error at all.
+
+The naming rules these names follow are repository-wide — see **Environment variable naming** in
+[`../CLAUDE.md`](../CLAUDE.md). What they decide here: `S3` is a group because it has four
+members that disambiguate, while `VIGIA_RTSP_URL`, `VIGIA_RECORDING_DIR`,
+`VIGIA_SEGMENT_DURATION_SECONDS` and `VIGIA_PLAYLIST_FILENAME` stay group-less until a second
+subsystem competes for the name — a `CAMERA_` group with a single member would be decorative.
+
+**Known reopening point:** the backlog needs `camera_id` in two places — the deterministic S3 key
+prefix (A6) and every structured log line (A7). Today the identity is the hardcoded `cameraA` in
+`container.ts`. Whichever way it comes back (env, systemd's `%i`, or the last segment of
+`VIGIA_RECORDING_DIR`), if it comes back as an environment variable then `CAMERA_` earns the
+group again: `VIGIA_RTSP_URL` renames to `VIGIA_CAMERA_RTSP_URL` and `env.rtspUrl` becomes
+`env.camera.rtspUrl`. That mechanical find-replace is the price accepted on purpose by "a group
+is earned" — recognize it as a foreseen consequence, not as rework.
 
 `.env.example` is the contract and is git-tracked; `.env` holds the real values and is
 git-ignored — **credentials never get committed**. Both `pnpm run start` and `just dev` load it
 via Node's native `--env-file-if-exists=.env` (no dotenv dependency); a variable already
 exported in the shell **wins** over the file — which is how a single run is overridden:
-`RECORDING_DIR=/tmp/rec just dev`, with no Justfile support needed.
+`VIGIA_RECORDING_DIR=/tmp/rec just dev`, with no Justfile support needed.
 
-Keep `RECORDING_DIR` **outside** the module tree in production. When it points inside it (the
+Keep `VIGIA_RECORDING_DIR` **outside** the module tree in production. When it points inside it (the
 devcontainer default `.recordings/`), the recorded `.ts` segments collide with TypeScript
 sources: `.gitignore`, `.prettierignore` and the eslint `ignores` all have to exclude it, or
 `just check` fails trying to parse video as code.
 
-`cameraValues` takes `env` as a parameter precisely so the tests never mutate the global
-`process.env`. Range and format rules (positive duration, absolute path, `rtsp://` scheme) stay
-in the **domain** — the container only checks presence and converts the string.
+**Zod validates format; the domain validates rule.** `Env` turns `"600"` into `600` and rejects a
+non-integer; what counts as a valid duration is still `Duration`'s call. Two Zod details that had
+to become code: the schema is **not** `.strict()` (`process.env` carries hundreds of foreign
+keys, so `Env` picks only the variables it declares), and an **empty string is treated as
+absent** — `VIGIA_S3_BUCKET=` produces the same message as the variable not existing. `Env.load`
+touches **no filesystem**: `VIGIA_RECORDING_DIR` is checked for being absolute, never for
+existing or being writable — that check belongs to the encoder adapter's startup.
+
+`Env.load` **throws** `EnvValidationError` carrying the complete list of problems; `main.ts`
+catches it, writes to `stderr` and exits 1. The class knows nothing about `process.exit` —
+lifecycle is the entrypoint's job, and that is what keeps it testable with no `process` stub.
+Aggregation comes free from Zod and matters under `Restart=always`: three missing variables cost
+one crash, not three. The message is assembled from the issue's **`path` plus our own text, never
+Zod's raw `message`** — some issue types echo the value they received, and one of those values is
+`VIGIA_S3_SECRET_ACCESS_KEY`.
+
+Values stay plain `string`s; the protection lives in `Env`: `[util.inspect.custom]` and `toJSON`
+return `"[REDACTED]"` for `s3.secretAccessKey` and `rtspUrl`, which covers `console.log(env)`,
+`logger.info({ env })` and interpolating the whole object. The frozen `env.s3` carries the same
+pair, otherwise `logger.info(env.s3)` would slip underneath. **What this deliberately leaves
+open:** `logger.info({ url: env.rtspUrl })` still leaks — the redaction protects the object, not
+the extracted field. The enforcement point for that stays the logger; `Env` shrinks the surface,
+it does not close it.
+
+Without an executable rule, "only `env.ts` reads `process.env`" is a convention that lasts until
+the first shortcut. `no-restricted-properties` in `eslint.config.js` makes it verifiable inside
+`just check`. Exactly two files are exempt: `env.ts`, which parses the source, and `main.ts`,
+which hands it over. Everything else receives what it needs as a parameter.
+
+The ffmpeg subprocess is the case that made the rule sharper. `FfmpegSubprocess` takes
+`sourceEnvironment` in the constructor and does **not** forward it: it builds the child's
+environment from an **allowlist** — `PATH`, because `execvp` resolves the binary using the
+**child's** `PATH` — plus the `TZ` it sets itself. Nothing else crosses. `HOME`, `LANG`, proxy
+variables and the whole `VIGIA_*` set (`VIGIA_S3_SECRET_ACCESS_KEY` included) stop being visible
+in the encoder's `/proc/<pid>/environ` for no reason, and what the child gets is asserted in a
+unit test instead of being whatever the runner happened to be started with. Adding a variable to
+`INHERITED_VARIABLES` is a deliberate act, which is the point.
 
 `Camera.DEFAULT_SEGMENT_DURATION` (600s) is **not** used by this path: it is the default
 published to configuration sources that omit the value, and it survives for when the config
@@ -145,7 +210,7 @@ adapter configuration — not domain vocabulary.
         commands/         # data shapes crossing a port (EncoderCommand)
         errors/           # application-level errors (ConfigValidationError)
         usecases/         # one class per case (ProcessClosedSegment, StartRecording, …)
-      infrastructure/     # adapters (per port) + container.ts + main.ts
+      infrastructure/     # adapters (per port) + env.ts + container.ts + main.ts
     tests/
       unit/               # no I/O at all — each bucket mirrors src/ folder for folder
         domain/

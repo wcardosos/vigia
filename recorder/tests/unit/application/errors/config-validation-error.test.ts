@@ -9,9 +9,11 @@ describe('ConfigValidationError', () => {
   });
 
   it('names the scope that rejected the field', () => {
-    const error = new ConfigValidationError('r2', 'bucket', 'must be a non-empty bucket name');
+    const error = new ConfigValidationError('s3', 'bucket', 'must be a non-empty bucket name');
 
-    expect(error.message).toBe('invalid r2 configuration: bucket — must be a non-empty bucket name');
+    expect(error.message).toBe(
+      'invalid s3 configuration: bucket — must be a non-empty bucket name',
+    );
   });
 
   it('exposes the field', () => {
@@ -21,8 +23,8 @@ describe('ConfigValidationError', () => {
   });
 
   it('exposes the scope', () => {
-    const error = new ConfigValidationError('r2', 'bucket', 'must be a non-empty bucket name');
+    const error = new ConfigValidationError('s3', 'bucket', 'must be a non-empty bucket name');
 
-    expect(error.scope).toBe('r2');
+    expect(error.scope).toBe('s3');
   });
 });
