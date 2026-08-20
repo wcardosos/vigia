@@ -5,7 +5,7 @@ import type { SegmentArchive } from '../../application/ports/segment-archive';
 import type { Segment } from '../../domain/entities/segment';
 import type { StorageKey } from '../../domain/value-objects/storage-key';
 
-export interface R2Values {
+export interface S3Values {
   readonly endpoint: string;
   readonly bucket: string;
   readonly accessKeyId: string;
@@ -26,7 +26,7 @@ export class R2Archive implements SegmentArchive {
   };
 
   constructor(
-    private readonly values: R2Values,
+    private readonly values: S3Values,
     private readonly client: S3ClientLike = R2Archive.clientFor(values),
     private readonly logArchiveFailure: LogArchiveFailure = R2Archive.writeFailureToStderr,
   ) {}
@@ -60,7 +60,7 @@ export class R2Archive implements SegmentArchive {
     );
   }
 
-  private static clientFor(values: R2Values): S3ClientLike {
+  private static clientFor(values: S3Values): S3ClientLike {
     return new S3Client({
       region: 'auto',
       endpoint: values.endpoint,

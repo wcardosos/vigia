@@ -1,6 +1,6 @@
 import { ApplicationError } from './application-error';
 
-export type ConfigScope = 'camera' | 'r2';
+export type ConfigScope = 'camera' | 's3';
 
 export class ConfigValidationError extends ApplicationError {
   constructor(

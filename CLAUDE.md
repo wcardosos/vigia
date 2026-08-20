@@ -32,6 +32,34 @@ A task is only **done** when, **in the module that was touched**:
 - Os pins vivem nos `ARG` do `Dockerfile` e em `recorder/package.json` → `packageManager`.
   Subir Node ou pnpm significa editar os dois.
 
+## Environment variable naming
+
+Vale para **todo módulo** — recorder hoje, `api/` e `web/` quando chegarem. O contrato de cada
+módulo (quais variáveis, o que cada uma espera) mora no `CLAUDE.md` dele; aqui ficam as regras
+que decidem o **nome**.
+
+1. `UPPER_SNAKE_CASE`, ASCII, `[A-Z][A-Z0-9_]*`. Underscore simples sempre; `__` nunca — é
+   artefato de _relaxed binding_ de framework, e o parser é nosso.
+2. Prefixo **`VIGIA_`** em tudo que é do projeto. A exceção é fechada: nomes que são convenção
+   genuína do ecossistema e não são nossos — `NODE_ENV`, `TZ`. `LOG_LEVEL` é nosso, logo
+   `VIGIA_LOG_LEVEL`.
+3. Formato `VIGIA_<GRUPO>_<CHAVE>`, e **grupo se conquista**: só existe com dois ou mais membros
+   _e_ quando desambigua de fato. Sem grupo decorativo, sem grupo profético — um grupo de um
+   membro só vira rename barato no dia em que o segundo aparecer.
+4. **O sufixo declara tipo e unidade**: `_URL`, `_DIR`, `_FILE`/`_FILENAME`, `_SECONDS`, `_MS`,
+   `_BYTES`, `_ENABLED`, `_COUNT`. Duração nunca sem unidade no nome.
+5. **Nome de tecnologia é permitido** — env é configuração de `infrastructure`, a única camada
+   autorizada a conhecer ffmpeg, S3 e REST. Mas o nome descreve o **contrato**, não o vendor:
+   `S3`, nunca `R2`.
+6. **Namespace próprio vence nome de vendor**: `VIGIA_S3_ACCESS_KEY_ID`, nunca
+   `AWS_ACCESS_KEY_ID` — mesmo sendo o que o SDK leria sozinho. A escolha existe para que o
+   composition root seja o **único leitor de configuração** do processo; a contrapartida é que o
+   client tem que receber as credenciais explicitamente no construtor, senão a _default
+   credential chain_ procura `AWS_*`, `~/.aws/credentials` e metadata de instância — e pode
+   achar, autenticando na conta errada sem erro nenhum.
+7. **Variável obrigatória não tem default.** Ausente ou vazia → falha na inicialização com exit
+   não-zero, antes de tocar disco ou subir subprocesso.
+
 ## Modules
 
 - `recorder/` — recorder, Node/TS. See [`recorder/CLAUDE.md`](recorder/CLAUDE.md).

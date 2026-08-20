@@ -17,6 +17,8 @@ export type SpawnEncoderProcess = (
 export class FfmpegSubprocess implements Encoder {
   private static readonly FFMPEG_BINARY = 'ffmpeg';
 
+  private static readonly INHERITED_VARIABLES: readonly string[] = ['PATH'];
+
   private static readonly STRFTIME_REPLACEMENTS: ReadonlyArray<readonly [RegExp, string]> = [
     [/YYYY/g, '%Y'],
     [/MM(?=DD)/g, '%m'],
@@ -32,6 +34,7 @@ export class FfmpegSubprocess implements Encoder {
 
   constructor(
     private readonly timezone: string,
+    private readonly sourceEnvironment: NodeJS.ProcessEnv,
     private readonly spawnEncoderProcess: SpawnEncoderProcess = FfmpegSubprocess.spawnFfmpeg,
   ) {}
 
@@ -40,10 +43,20 @@ export class FfmpegSubprocess implements Encoder {
       FfmpegSubprocess.FFMPEG_BINARY,
       FfmpegSubprocess.argumentsFor(command),
       {
-        env: { ...process.env, TZ: this.timezone },
+        env: this.environmentFor(),
         stdio: 'inherit',
       },
     );
+  }
+
+  private environmentFor(): NodeJS.ProcessEnv {
+    const inherited = FfmpegSubprocess.INHERITED_VARIABLES.flatMap((variable) => {
+      const value = this.sourceEnvironment[variable];
+
+      return value === undefined ? [] : [[variable, value] as const];
+    });
+
+    return { ...Object.fromEntries(inherited), TZ: this.timezone };
   }
 
   private static argumentsFor(command: EncoderCommand): string[] {

@@ -38,10 +38,13 @@ interface SpawnCall {
   readonly options: EncoderProcessOptions;
 }
 
-function startEncoder(timezone = 'America/Fortaleza'): SpawnCall[] {
+function startEncoder(
+  timezone = 'America/Fortaleza',
+  sourceEnvironment: NodeJS.ProcessEnv = { PATH: '/usr/bin' },
+): SpawnCall[] {
   const calls: SpawnCall[] = [];
 
-  new FfmpegSubprocess(timezone, (binary, args, options) => {
+  new FfmpegSubprocess(timezone, sourceEnvironment, (binary, args, options) => {
     calls.push({ binary, args, options });
   }).start(command);
 
@@ -79,6 +82,23 @@ describe('FfmpegSubprocess', () => {
       '/var/lib/vigia/cameraA/%Y%m%dT%H%M%S.ts',
     );
     expect(call?.options.env.TZ).toBe('America/Fortaleza');
+  });
+
+  it('the subprocess environment carries the binary lookup path and the timezone, nothing else', () => {
+    const [call] = startEncoder('UTC', {
+      PATH: '/opt/bin',
+      TZ: 'Etc/GMT-3',
+      VIGIA_S3_SECRET_ACCESS_KEY: 'the-secret-access-key',
+      VIGIA_RTSP_URL: 'rtsp://admin:s3cr3t@192.168.1.3:554/onvif1',
+    });
+
+    expect(call?.options.env).toEqual({ PATH: '/opt/bin', TZ: 'UTC' });
+  });
+
+  it('the subprocess environment omits a lookup path the source does not have', () => {
+    const [call] = startEncoder('UTC', {});
+
+    expect(call?.options.env).toEqual({ TZ: 'UTC' });
   });
 
   it('derived command keeps the full playlist and never deletes segments', () => {

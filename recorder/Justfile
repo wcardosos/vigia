@@ -35,6 +35,6 @@ test-e2e:
 format:
     pnpm exec prettier --write .
 
-# Local run via tsx. Reads .env; prefix to override, e.g. RECORDING_DIR=/tmp/rec just dev.
+# Local run via tsx. Reads .env; prefix to override, e.g. VIGIA_RECORDING_DIR=/tmp/rec just dev.
 dev:
     pnpm run start
